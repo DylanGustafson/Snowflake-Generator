@@ -48,7 +48,7 @@ if not arg_entries:
         print('Error importing RangeSlider - Using Tkinter entry widgets instead')
         arg_entries = True
 
-#Aspect ratio 2/sqrt(3)
+#Display aspect ratio: 2/sqrt(3)
 ratio = 2 / 3 ** 0.5
 
 class Snowflake:
@@ -58,6 +58,7 @@ class Snowflake:
     branch = False
     zooming = None
 
+    #Rasterization variables
     eighth = -1
     cell = None
     bar = [None] * 2
@@ -65,18 +66,21 @@ class Snowflake:
     fillet = [None] * 6
     raster = {'frame': -1, 'radius': 0, 'data': None}
 
+    #Creates single frame with only one central ON cell (seed crystal)
     def __init__(self):
         self.grids = [np.zeros((self.min_size, self.min_size), dtype=bool)]
         self.grids[0][2,2] = True
 
+    #Writes new neighbor restriction bounds
     def set_bounds(self, new_bounds):
         for i in range(4):
             self.bounds[i] = range(int(new_bounds[i][0]), int(new_bounds[i][1]))
 
-    #Return radius of snowflake #t with 10% padding
+    #Returns radius of snowflake on frame [t] with 5% padding
     def get_flake_radius(self, t):
         return int((len(self.grids[t]) - 4) * 1.05)
 
+    #Generates filled ellipse (circular when displayed) with given semi-major axis (radius)
     def get_disk(self, radius, data_type):
         disk = np.zeros((radius * 2, radius * 2), dtype=data_type)
 
@@ -89,6 +93,7 @@ class Snowflake:
         disk[:radius, :] = np.flip(disk[radius:, :], 0)
         return disk
 
+    #Draws graphic of highlighted neighbors for GUI
     def get_neighbor_graphic(self, neighbor, radius):
         #Highlight adjacent, colors 0 - 3
         if neighbor == 1:
@@ -116,27 +121,32 @@ class Snowflake:
         raster_size = pic_size * disk_size
         raster = np.kron(pic, disk)
 
+        #Shift every odd column of cells down by half of one cell (cell radius)
         for j in range(1, pic_size, 2):
-            column = slice(j * disk_size, (j+1) * disk_size)
+            column = slice(j * disk_size, (j + 1) * disk_size)
             raster[radius:-radius, column] = raster[:-disk_size, column]
             raster[:radius, column] = 0
 
+        #Pad to square shape
         padding = round(raster_size * (ratio - 1) / 2)
         raster = np.pad(raster, ((0,0), (padding, padding)))
         return raster
 
-    #Return raster of given frame
+    #Returns raster of given frame with given cell radius
     def rasterize(self, t, radius):
+        #If requesting previously drawn raster, return it
         if self.raster['frame'] == t and self.raster['radius'] == radius:
             return self.raster['data']
 
+        #Otherwise save info to potentially avoid redrawing needlessly
         self.raster['frame'] = t
         self.raster['radius'] = radius
+        
+        #Rasterize small using rectangles, or large using disks
         self.raster['data'] = self.rasterize_small(t) if radius == 1 else self.rasterize_large(t, radius)
-
         return self.raster['data']
 
-    #Rasterize using rectangular cells, each one a squished 2x1 image
+    #Rasterizes using rectangular cells, each made of 2x1 pixel blocks
     def rasterize_small(self, t):
         #Cell position array (A) and cell image for kronecker product
         A = self.grids[t][2:-2, 2:-2]
@@ -169,10 +179,10 @@ class Snowflake:
         #Bar components between two adjacent ON cells
         self.bar[0] = np.ones((eighth*10, eighth*12), dtype=bool)
         for i in range(eighth * 4):
-            self.bar[0][i, eighth * 4 + i * 2 + 1:] = False
-            self.bar[0][eighth * 6 + i, :i * 2 + 1] = False
-        self.bar[0][:eighth * 6, :eighth * 4] = False
-        self.bar[0][eighth * 4:, eighth * 8:] = False
+            self.bar[0][i, eighth*4 + i * 2 + 1 :] = False
+            self.bar[0][eighth*6 + i, : i * 2 + 1] = False
+        self.bar[0][: eighth*6, : eighth*4] = False
+        self.bar[0][eighth*4 :, eighth*8 :] = False
         self.bar[1] = np.flip(self.bar[0], 0)
 
         #Fillet component coordinate offsets
@@ -191,7 +201,7 @@ class Snowflake:
         self.fillet[4] = np.flip(self.fillet[2], 1)
         self.fillet[5] = np.flip(self.fillet[1], 1)
 
-    #Rasterize using elliptical (circular when displayed) cells, with bars and fillets between adjacent cells
+    #Rasterizes using elliptical (circular when displayed) cells, with bars and fillets between adjacent cells
     def rasterize_large(self, t, radius):
         #Generate new raster components if needed
         eighth = int(radius / 4)
@@ -213,7 +223,7 @@ class Snowflake:
         #Generate bottom right quarter of raster using kronecker product on grid.
         half_size = int(raster_size / 2)
         offset = half_size - cell_radius
-        raster[offset:, offset:] = np.kron(A[2:-2,2:-2], self.cell)
+        raster[offset:, offset:] = np.kron(A[2:-2, 2:-2], self.cell)
 
         n = [False] * 6
         #Loop through grid columns, ignoring both padding columns on the left and 3 of the 4 padding columns on the right
@@ -232,23 +242,27 @@ class Snowflake:
                 ci = offset + (i - 2) * cell_diam + parity * cell_radius
                 i_par = i + parity
 
-                #If cell is on, copy in cell sprite and add bars between adjacent cells above & to the left
+                #If cell is on, check cells in the 8, 10, and 12 o'clock directions to connect with bars
                 if A[i, j]:
+                    #Draw bar to ON cell in the 12 o'clock direction
                     if A[i - 1, j]:
                         raster[ci - cell_radius : ci + cell_radius, cj : cj + cell_diam] = True
-
+                    
+                    #Draw bar to ON cell in the 10 o'clock direction
                     upper_left = A[i_par - 1, j - 1]
                     if upper_left and eighth:
                         raster[ci - eighth*3 : ci + eighth*7, cj - eighth*6 : cj + eighth*6] += self.bar[0]
                     elif upper_left:
                         raster[ci - 1 : ci + 3, cj - 1 : cj + 1] = True
-
+                    
+                    #Draw bar to ON cell in the 8 o'clock direction
                     lower_left = A[i_par, j - 1]
                     if lower_left and eighth:
                         raster[ci + eighth : ci + eighth*11, cj - eighth*6 : cj + eighth*6] += self.bar[1]
                     elif lower_left:
                         raster[ci + 1 : ci + 5, cj - 1: cj + 1] = True
-
+                    
+                    #Remaining logic is only for OFF cells
                     continue
 
                 #Skip fillets if cells are 4x4
@@ -278,25 +292,26 @@ class Snowflake:
     #Counts the near and far (adjacent and proximate) neighbors to a given cell in A
     def count_neighbors(self, A, i, j):
         #Start by accessing and combining guaranteed neighbors (independent of column number)
-        near = int(A[i-1,j]) + int(A[i,j-1]) + int(A[i,j+1]) + int(A[i+1,j])
-        far = int(A[i,j-2]) + int(A[i,j+2])
-        above = int(A[i-1,j-1]) + int(A[i-1,j+1])
-        below = int(A[i+1,j-1]) + int(A[i+1,j+1])
+        near = int(A[i - 1, j]) + int(A[i, j - 1]) + int(A[i, j + 1]) + int(A[i + 1, j])
+        far = int(A[i, j - 2]) + int(A[i, j + 2])
+        above = int(A[i - 1, j - 1]) + int(A[i - 1, j + 1])
+        below = int(A[i + 1, j - 1]) + int(A[i + 1, j + 1])
 
         #Near and far neighbors located in different rows depending on column
         if j % 2:
             near += below
-            far += above + int(A[i+2,j-1]) + int(A[i+2,j+1])
+            far += above + int(A[i + 2, j - 1]) + int(A[i + 2, j + 1])
         else:
             near += above
-            far += below + int(A[i-2,j-1]) + int(A[i-2,j+1])
+            far += below + int(A[i - 2, j - 1]) + int(A[i - 2, j + 1])
 
         return [near, far]
 
+    #Generates frame [t] using frames [t-1] and [t-2]
     def generate(self, t):
         #Load current generation and previous generation
-        A = self.grids[t-1]
-        B = self.grids[max(t-2,0)]
+        A = self.grids[t - 1]
+        B = self.grids[max(t - 2, 0)]
         size = len(A)
         prev_size = len(B)
 
@@ -305,7 +320,7 @@ class Snowflake:
 
         #Start with copy of current generation
         self.grids += [np.zeros((size + 2, size + 2), dtype=bool)]
-        self.grids[t][2:size, 2:size] = A[2:,2:]
+        self.grids[t][2:size, 2:size] = A[2:, 2:]
 
         #Initialize varibles used by for loops
         neigh = [0] * 4
@@ -322,19 +337,19 @@ class Snowflake:
                 #Count up near and proximate neighbors
                 [neigh[0], neigh[2]] = self.count_neighbors(A, i, j)
                 in_bounds = i < prev_size - 2 and j < prev_size - 2
-                [neigh[1], neigh[3]] = self.count_neighbors(B, i, j) if in_bounds else [0,0]
+                [neigh[1], neigh[3]] = self.count_neighbors(B, i, j) if in_bounds else [0, 0]
                 row_ncount += sum(neigh)
 
                 #Check if branching rule is satisfied
                 branching = self.branch and neigh[0] == 1 and (neigh[1] == 1 or neigh[2] == 0)
                 
-                #Alternate branching rule that creates cleaner spike intersections
+                ##Alternate branching rule that creates cleaner spike intersections
                 #branching = self.branch and neigh[0] == 1 and (neigh[1] == 1 or neigh[3] == 0)
 
                 #Activate cell if on spoke or if neighbor counts are within bounds
                 if branching or all([neigh[k] in self.bounds[k] for k in range(4)]):
                     self.grids[t][i,j] = True
-                    outermost = max(outermost, max(i,j))
+                    outermost = max(outermost, max(i, j))
 
             #Finish early if no neighbors left
             if not row_ncount:
@@ -349,22 +364,28 @@ class Snowflake:
         self.grids[t][:2, 3::2] = np.flip(self.grids[t][2:4, 3::2], 0)
         self.grids[t][:,:2] = np.flip(self.grids[t][:,3:5], 1)
 
-    #Run a defined sequence of presets
+    #Runs a defined sequence of presets
     def gen_sequence(self):#, sequence)
         sequence = [[[1,2], [0,7], [0,1], [0,7], True, 13],
                     [[1,3], [0,7], [0,2], [0,7], False, 1],
                     [[1,5], [0,7], [0,7], [0,7], False, 1],
                     [[0,7], [0,7], [1,3], [1,2], False, 4]]
 
+        #Get total number of steps for progress indicator
         total = sum([step[5] for step in sequence])
+        
         self.__init__()
         for step in sequence:
+            #Set rules
             self.set_bounds(step[:4])
             self.spike_rule = step[4]
+            
+            #Repeat rule the given number of times
             for i in range(step[5]):
                 frame = len(self.grids)
                 self.generate(frame)
                 print(f'Generating: {100 * frame/total:3.0f}%', end='\r')
+
 
 class Application:
     #Delay (ms) before click-hold is repeated
@@ -391,7 +412,8 @@ class Application:
     generating = None
     zooming = None
     advancing = None
-
+    
+    #Builds the GUI window(s) with a blank snowflake
     def __init__(self):
         #Read in presets from file and create snowflake object
         self.load_presets()
@@ -399,7 +421,7 @@ class Application:
 
         #Create root window
         self.root = tk.Tk()
-        self.root.wm_title('Snowflake Cellular Automata')
+        self.root.wm_title('Snowflake Generator')
         self.root.protocol("WM_DELETE_WINDOW", exit)
 
         #Estimate screen resolution using width of given font size, since winfo_fpixels sometimes gets it wrong
@@ -414,34 +436,34 @@ class Application:
         self.pack_inputs()
 
         if arg_split:
-            self.create_flake_figure(5 * self.font_ratio) #Create flake figure of fixed size
-            self.fig.show()                               #Show snowflake graphic in second window
-            self.fignum = self.fig.number                 #Save figure number for checking if it gets closed
-            self.btn_resize['state'] = 'disabled'         #Disable resize button since it has nothing to do
+            self.create_flake_figure(5 * self.font_ratio)  #Create flake figure of fixed size
+            self.fig.show()                                #Show snowflake graphic in second window
+            self.fignum = self.fig.number                  #Save figure number for checking if it gets closed
+            self.btn_resize['state'] = 'disabled'          #Disable resize button since it has nothing to do
         else:
-            self.root.update()                            #Update current root in order to read height in pixels for sizing snowflake frame
-            self.build_GUI()                              #Builds the GUI by adding snowflake canvas (TkAgg) and re-packing input frames
-            self.root.eval('tk::PlaceWindow . center')    #Re-center root window
-            self.root.bind("<Key>", self.key_press)       #For binding 'R' key to the resize button
+            self.root.update()                             #Update current root in order to read height in pixels for sizing snowflake frame
+            self.build_GUI()                               #Builds the GUI by adding snowflake canvas (TkAgg) and re-packing input frames
+            self.root.eval('tk::PlaceWindow . center')     #Re-center root window
+            self.root.bind("<Key>", self.key_press)        #For binding 'R' key to the resize button
 
         #Start with 'Classic' preset and play buttons disabled
         self.select_preset('Classic')
         self.play_state('disabled')
 
-    #Pack input frames into root window
+    #Packs input frames into root window
     def pack_inputs(self):
         self.frm_setup.pack(side=tk.TOP, padx=10, pady=10)
         self.frm_play.pack(side=tk.BOTTOM, padx=10, pady=20)
         self.frm_display.pack(side=tk.BOTTOM, padx=10, pady=10)
 
-    #Create snowflake's matplotlib figure with imshow plot
+    #Creates snowflake's matplotlib figure with imshow plot
     def create_flake_figure(self, size):
         self.fig, self.ax = plt.subplots(figsize=(size, size), facecolor=self.d_blue)
         self.img = self.ax.imshow(self.get_image(), 'Blues', interpolation='nearest', aspect = ratio)
         self.fig.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
         self.ax.axis('off')
 
-    #Get window size, then clear out frames and add properly-sized snowflake frame, then re-pack input frames
+    #Clears out frames and adds properly-sized snowflake frame, then re-packs input frames
     def build_GUI(self):
         #Get current window size (-10px margins) and convert into matplotlib's size units (supposedly inches)
         size = (self.root.winfo_height() - 20) / 100
@@ -553,10 +575,10 @@ class Application:
         self.lbl_neighbor_type = [None] * 4
         self.lbl_from = [None] * 4
         self.lbl_to = [None] * 4
-        padys_rel = [(6,6),(6,12),(12,6),(6,6)]
+        padys_rel = [(6,6), (6,12), (12,6), (6,6)]
         padys = [(i[0] * self.font_ratio * 1.5, i[1] * self.font_ratio * 1.5) for i in padys_rel]
 
-        #If initialized as [[None,None]]*4 or [[None]*2]*4, Tkinter will write var/ent objects to the same point in memory
+        #If initialized as [[None,None]]*4 or [[None]*2]*4, objects will be written to the same points in memory
         self.var_neighbors = [[None,None], [None,None], [None,None], [None,None]]
         self.ent_neighbors = [[None,None], [None,None], [None,None], [None,None]]
 
@@ -732,12 +754,12 @@ class Application:
         self.btn_next['state'] = state
         self.btn_last['state'] = state
 
-    #Stop generating upon click release
+    #Stops generating upon click release
     def stop_gen(self):
         self.root.after_cancel(self.generating)
         self.generating = None
 
-    #Read bounds from sliders or entries, updating them if needed
+    #Reads bounds from sliders or entries, updating them if needed
     def read_bounds(self):
         if not arg_entries:
             return [[int(i) for i in sld.val] for sld in self.sliders]
@@ -754,7 +776,7 @@ class Application:
 
         return bounds
 
-    #Load neighbor bounds into snowflake and generate next frame. Allows for click repeat
+    #Loads neighbor bounds into snowflake and generate next frame. Allows for click repeat
     def gen_next(self):
         bounds = self.read_bounds()
 
@@ -773,7 +795,7 @@ class Application:
 
         self.generating = self.root.after(delay, self.gen_next)
 
-    #Generate snowflake frames until it reaches the edge of the canvas (only displays final)
+    #Generates snowflake frames until it reaches the edge of the canvas (only displays final)
     def gen_all(self):
         bounds = self.read_bounds()
         self.sf.set_bounds(bounds)
@@ -789,6 +811,7 @@ class Application:
         self.play_state('normal')
         self.update()
 
+    #Resets view to default radius and resolution, clears 'interpolate' and 'flip'
     def reset_view(self):
         self.interp = False
         self.btn_interp.deselect()
@@ -800,18 +823,18 @@ class Application:
         self.set_resolution(1)
         self.set_view(self.default_radius)
 
-    #Rebuild GUI to current window size
+    #Rebuilds GUI to current window size
     def rebuild_GUI(self):
         self.set_resolution(max(self.res_num, 1))
         self.frm_flake.pack_forget()
         self.build_GUI()
 
-    #Binding "R" to resize function
+    #Binds "R" key to resize function
     def key_press(self, key):
         if key.char.lower() == 'r':
             self.rebuild_GUI()
 
-    #Set resolution of snowflake given index of self.resolutions
+    #Sets resolution of snowflake given index of self.resolutions
     def set_resolution(self, new_res):
         self.res_num = new_res % len(self.resolutions)
 
@@ -832,6 +855,7 @@ class Application:
         self.root.after_cancel(self.zooming)
         self.zooming = None
 
+    #Zooms in or out of the snowflake, allowing for repitition
     def zoom(self, direction):
         self.zoom_radius = max(self.min_radius, self.zoom_radius + direction)
 
@@ -854,12 +878,12 @@ class Application:
         self.btn_zoom_plus['state'] = 'normal'
         self.update()
 
-    #Toggle 90-degree flip (actually transpose) for snowflake imshow
+    #Toggles 90-degree flip (actually transpose) for snowflake imshow
     def toggle_flip(self):
         self.flip = not self.flip
         self.update()
 
-    #Toggle bicubic interpolation in snowflake imshow
+    #Toggles bicubic interpolation in snowflake imshow
     def toggle_interp(self):
         self.interp = not self.interp
 
@@ -887,14 +911,17 @@ class Application:
 
         self.advancing = self.root.after(delay, self.advance, direction)
 
+    #Jumps to first snowflake frame
     def first(self):
         self.frame = 0
         self.update()
 
+    #Jumps to final snowflake frame
     def last(self):
         self.frame = len(self.sf.grids) - 1
         self.update()
 
+    #Updates imshow plot and reopen figure window if needed
     def update(self):
         self.img.set_data(self.get_image())
 
@@ -910,18 +937,23 @@ class Application:
         self.fig.canvas.draw()
         self.fig.show()
 
+    #Gets raster from sf object and modify size to fit in square canvas
     def get_image(self):
+        #Get raster array from sf
         cell_radius = self.resolutions[self.res_num]
         raster = self.sf.rasterize(self.frame, cell_radius)
-
-        cell_size = cell_radius * 2
         rast_size = len(raster)
+
+        #Get total image height based on current zoom level
+        cell_size = cell_radius * 2
         img_height = (self.zoom_radius * 2 + 1) * cell_size
 
+        #Calculate necessary padding in x & y direction
         pad_x_div = 2 if self.res_num else 4
         pad_x = round((img_height * ratio - rast_size) / pad_x_div)
         pad_y = round((img_height - rast_size) / 2)
 
+        #If padding is negative, simply truncate raster
         if pad_y < 0:
             raster = raster[-pad_y:pad_y, :]
             pad_y = 0
@@ -929,8 +961,11 @@ class Application:
             raster = raster[:, -pad_x:pad_x]
             pad_x = 0
 
+        #Add positive padding rows/columns and update zoom_radius
         raster = np.pad(raster, ((pad_y,pad_y), (pad_x,pad_x)))
         self.zoom_radius = int((len(raster)/cell_size - 1) / 2)
+        
+        #Flip 90 degrees by simply transposing
         if self.flip:
             raster = np.transpose(raster)
 
