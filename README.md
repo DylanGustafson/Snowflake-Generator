@@ -40,7 +40,7 @@ The upper right controls dictate how the snowflake grows, while the controls in 
 
 Adjacent and Proximate neighbor limits are controlled using the range sliders in the upper right. Directly below them is a menu of presets that generate some nice shapes. Next to that is a check button that can toggle the rule that encourages branching.
 
-Use the "Generate" button to compute the next generation, the "General all" button to compute generations until the canvas fram is filled, and "clear" to restart at the first frame.
+Use the "Generate" button to compute the next generation, the "Generate all" button to compute generations until the canvas fram is filled, and "clear" to restart at the first frame.
 
 At the bottom right are play buttons that can cycle forward or backward through previously generated frames, and can be held down to create an animation. Above the play buttons are display options such as zoom and resolution.
 
