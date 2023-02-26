@@ -1,4 +1,4 @@
-This is a personal tinkering project to generate snowflakes using cellular automata using my own customized implementation. Crystal growth is dictated by simple neighbor-counting rules that are analogous to ambient temperature, pressure, and humidity effects for real snowflakes. This program is not meant to be an accurate physics simulation, but rather a demonstration of emergence.
+This is a personal tinkering project to generate snowflakes via cellular automata using my own customized implementation. Crystal growth is dictated by simple neighbor-counting rules that are analogous to ambient temperature, pressure, and humidity effects for real snowflakes. This program is not meant to be an accurate physics simulation, but rather a demonstration of emergence.
 
 ![Screenshot](https://raw.githubusercontent.com/DylanGustafson/Snowflake-Generator/main/Screenshot.png)
 
@@ -9,7 +9,7 @@ This program contains a 2D lattice of cells in a hexagonal packing arrangement. 
 
 A classic example is the simple rule that cells can only activate if they have one adjacent "on" neighbor. Running this rule produces shapes alternating between hexagonal plate and stellar plate. Another example is one that requires one adjacent neighbor and zero proximate neighbors. This stricter rule produces straight spikes radiating from their origin. When paired with other rules it can form branches and dendrites.
 
-There are endless combinations of rules to experiment with, however so far my favorite results are created by combining the "radiating spikes" rule (as a sufficient condition) with neighbor restriction rules (as necessary conditions). The radiating spikes rule encourages branching, hence the "Encourage branching" option, while the neighbor restrictions dictate how these branches grow. See the Snowflake.generate() function for details. I encourage you to experiment with other combos.
+There are endless combinations of rules to experiment with, however so far my favorite results are created by combining the "radiating spikes" rule (as a sufficient condition) with neighbor restriction rules (as mutually necessary conditions). The radiating spikes rule encourages branching, hence the "Encourage branching" option on the GUI, while the neighbor restrictions dictate how these branches grow. See the Snowflake.generate() function for details. I encourage anyone interested to write their own rules and combinations.
 
 I have included my favorites in a preset menu on the GUI, although the best shapes come from changing the rules between generations. This is analogous to a snowflake falling through changing atmospheric conditions.
 
