@@ -21,7 +21,7 @@ Run the program normally with:
 python3 snowflake.py
 ```
 
-The program uses Matplotlib's `FigureCanvasTkAgg` to composite the plot into the GUI, and `RangeSlider` to visually edit the neighbor restrictions. Both of these can be a bit finicky, especially on MacOS. Updating Matplotlib may fix things, but if there are still issues, try running the program with any of the follow options, which can be combined.
+The program uses Matplotlib's `FigureCanvasTkAgg` to composite the plot into the GUI, and `RangeSlider` to visually edit the neighbor restrictions. Both of these can be a bit finicky, especially on MacOS. Updating Matplotlib may fix things, but if there are still issues, try running the program with any of the following options, which can be combined.
 
 To display the snowflake in a separate window:
 ```
