@@ -1,0 +1,16 @@
+#[name]  :  [neighbor restrictions (0-6,0-6)x4]   [Encourage branching (0/1)]
+#Classic              : 1,1 -,- -,- -,- 0
+Stellar plate 2       : 1,1 -,- -,- 0,1 0
+Paddles               : 1,2 -,- 0,1 -,- 0
+Fern dendrite 1a      : 2,2 -,- 0,1 -,- 1
+Fern dendrite 1b      : 2,2 1,1 0,1 -,- 1
+Fern dendrite 2       : 2,2 -,- 2,2 -,- 1
+Messy Fern            : 1,- -,- 2,2 2,2 1
+Plate dendrite 1      : 1,2 -,- 2,2 -,- 1
+Plate dendrite 2      : 1,- -,- 2,2 -,- 1
+Hexagonal plate       : -,- -,- 2,2 -,- 1
+Lattice               : 1,1 -,- 0,1 -,- 1
+Start spikes          : 1,1 -,- -,- 0,0 1
+Continue spikes       : 1,1 -,- -,- 0,0 0
+Outline               : -,- -,- 1,2 1,1 0
+Thicken               : 2,3 -,3 -,3 -,- 0
