@@ -49,4 +49,4 @@ Use the "Generate" button to compute the next generation, the "Generate all" but
 At the bottom right are play buttons that can cycle forward or backward through previously generated frames, and can be held down to create an animation. Above the play buttons are display options such as zoom and resolution.
 
 ## Presets
-Neighbor restriction presets are loaded from presets.txt, which must be located in the same directory as snowflake.py to work properly. Presets can be added to this file by adding new lines with the same format as the included ones.
+Neighbor restriction presets are loaded from presets.txt, which must be located in the same directory as snowflake.py to work properly. Presets can be added to this file by copying the format of the included lines.
