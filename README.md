@@ -1,5 +1,7 @@
 This is a personal tinkering project to generate snowflakes using cellular automata using my own customized implementation. Crystal growth is dictated by simple neighbor-counting rules that are analogous to ambient temperature, pressure, and humidity effects for real snowflakes. This program is not meant to be an accurate physics simulation, but rather a demonstration of emergence.
 
+![Screenshot](https://raw.githubusercontent.com/DylanGustafson/Snowflake-Generator/main/Screenshot.png)
+
 ## Background
 Snowflake crystals grow when supercooled water droplets collide with seed crystals and fuse solid. This process releases heat due to the enthalpy of fusion, warming up the immediate area and temporarily inhibiting further growth. When humidity is low, the crystal growth is slow enough that this warming effect is insignificant. Thus, due to the hexagonal crystal structure of ice, the crystal grows outward uniformly into a hexagon. When humidity is high and the warming effect is not negligible, crystal growth will be reduced in areas that are already more "filled in." This results in the natural formation of spikes and dendrites with hexagonal symmetry.
 
