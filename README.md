@@ -9,17 +9,19 @@ This program contains a 2D lattice of cells in a hexagonal packing arrangement. 
 
 A classic example is the simple rule that cells can only activate if they have one adjacent "on" neighbor. Running this rule produces shapes alternating between hexagonal plate and stellar plate. Another example is one that requires one adjacent neighbor and zero proximate neighbors. This stricter rule produces straight spikes radiating from their origin. When paired with other rules it can form branches and dendrites.
 
-There are endless combinations of rules to experiment with, however so far my favorite results are created by combining the "radiating spikes" rule (as a sufficient condition) with neighbor restriction rules (as necessary conditions). The radiating spikes rule encourages branching, while the neighbor restrictions dictate how the branches grow. See the Snowflake.generate() function for details. I have included my favorites in a preset menu on the GUI. This is a tinkering project so I encourage you to modify the code to try your own combinations too.
+There are endless combinations of rules to experiment with, however so far my favorite results are created by combining the "radiating spikes" rule (as a sufficient condition) with neighbor restriction rules (as necessary conditions). The radiating spikes rule encourages branching, hence the "Encourage branching" option, while the neighbor restrictions dictate how these branches grow. See the Snowflake.generate() function for details. I encourage you to experiment with other combos.
+
+I have included my favorites in a preset menu on the GUI, although the best shapes come from changing the rules between generations. This is analogous to a snowflake falling through changing atmospheric conditions.
 
 ## Installation
-This program runs on Python 3.x, and uses the libraries `NumPy`, `Matplotlib`, and `Tkinter`.
-Run the program with:
+This program runs on Python 3.x, and uses libraries `NumPy`, `Matplotlib`, and `Tkinter`.
+Run the program normally with:
 
 ```
 python3 snowflake.py
 ```
 
-The program uses Matplotlib's `FigureCanvasTkAgg` to composite the plot into the GUI, and `RangeSlider` to visually edit the neighbor restrictions. Both of these can be a bit finicky, especially on MacOS. The solution may be to simply update Matplotlib, but if there are still issues, try running the program with the follow options, which can be combined.
+The program uses Matplotlib's `FigureCanvasTkAgg` to composite the plot into the GUI, and `RangeSlider` to visually edit the neighbor restrictions. Both of these can be a bit finicky, especially on MacOS. Updating Matplotlib may fix things, but if there are still issues, try running the program with any of the follow options, which can be combined.
 
 To display the snowflake in a separate window:
 ```
@@ -40,7 +42,7 @@ python3 snowflake.py -t
 
 The upper right controls dictate how the snowflake grows, while the controls in the lower right are display options. 
 
-Adjacent and Proximate neighbor limits are controlled using the range sliders in the upper right. Directly below them is a menu of presets that generate some nice shapes. Next to that is a check button that can toggle the rule that encourages branching.
+Adjacent and Proximate neighbor limits are controlled using the range sliders in the upper right. Directly below them is a menu of presets I have cataloged that generate some nice shapes. Next to that is a check button that can toggle the rule that encourages branching.
 
 Use the "Generate" button to compute the next generation, the "Generate all" button to compute generations until the canvas fram is filled, and "clear" to restart at the first frame.
 
