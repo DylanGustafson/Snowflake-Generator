@@ -1,16 +1,18 @@
-#[name]  :  [neighbor restrictions (0-6,0-6)x4]   [Encourage branching (0/1)]
-#Classic              : 1,1 -,- -,- -,- 0
-Stellar plate 2       : 1,1 -,- -,- 0,1 0
-Paddles               : 1,2 -,- 0,1 -,- 0
-Fern dendrite 1a      : 2,2 -,- 0,1 -,- 1
-Fern dendrite 1b      : 2,2 1,1 0,1 -,- 1
-Fern dendrite 2       : 2,2 -,- 2,2 -,- 1
-Messy Fern            : 1,- -,- 2,2 2,2 1
-Plate dendrite 1      : 1,2 -,- 2,2 -,- 1
-Plate dendrite 2      : 1,- -,- 2,2 -,- 1
-Hexagonal plate       : -,- -,- 2,2 -,- 1
-Lattice               : 1,1 -,- 0,1 -,- 1
-Start spikes          : 1,1 -,- -,- 0,0 1
-Continue spikes       : 1,1 -,- -,- 0,0 0
-Outline               : -,- -,- 1,2 1,1 0
-Thicken               : 2,3 -,3 -,3 -,- 0
+#[name]  :  [neighbor restrictions (0-6,0-6)x4] [Encourage branching (0/1)]   Randomizer: [Max duration] [Prob weight]
+#Classic              : 1,1 -,- -,- -,- 0 8 1
+Fern dendrite 1a      : 2,2 -,- 0,1 -,- 1 8 2
+Fern dendrite 1b      : 2,2 1,1 0,1 -,- 1 8 2
+Fern dendrite 2       : 2,2 -,- 2,2 -,- 1 8 1
+Messy Fern            : 1,- -,- 2,2 2,2 1 8 2
+Plate dendrite 1      : 1,2 -,- 2,2 -,- 1 8 1
+Plate dendrite 2      : 1,- -,- 2,2 -,- 1 8 1
+Intricate plate       : -,- -,- 2,2 -,- 1 8 1
+Thick Plate           : 1,6 -,- 0,2 -,- 0 6 1
+Solid Plate           : 1,6 0,1 -,- -,- 0 6 2
+Lattice               : 1,1 -,- 0,1 -,- 1 6 1
+Paddles               : 1,2 -,- 0,1 -,- 0 6 3
+Start spikes          : 1,1 -,- -,- 0,0 1 8 4
+Continue spikes       : 1,1 -,- -,- 0,0 0 1 4
+Outline 1             : -,- -,- 1,2 1,1 0 1 1
+Outline 2             : -,- -,- 1,2 1,1 1 1 1
+Thicken               : 2,3 -,3 -,3 -,- 0 2 1

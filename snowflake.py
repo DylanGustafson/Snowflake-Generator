@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
 import tkinter.font as tkfont
+import random
 
 #Default arg values
 arg_entries = False
@@ -12,6 +13,13 @@ arg_textonly = False
 
 #Read command line args
 for arg in sys.argv[1:]:
+    if 'help' in arg:
+        print('Options:')
+        print('-e\t: Use entries instead of range sliders')
+        print('-s\t: Split GUI window from snowflake plot')
+        print('-t\t: Minimize GUI elements (same as -es)')
+        exit()
+
     if not arg.startswith('-'):
         continue
     if 'e' in arg:
@@ -64,17 +72,18 @@ class Snowflake:
     bar = [None] * 2
     fc = [None] * 6
     fillet = [None] * 6
-    raster = {'frame': -1, 'radius': 0, 'data': None}
 
     #Creates single frame with only one central ON cell (seed crystal)
     def __init__(self):
         self.grids = [np.zeros((self.min_size, self.min_size), dtype=bool)]
         self.grids[0][2,2] = True
+        self.raster = {'frame': -1, 'radius': 0, 'data': None}
 
-    #Writes new neighbor restriction bounds
+    #Writes new neighbor restriction bounds & branch state
     def set_bounds(self, new_bounds):
         for i in range(4):
             self.bounds[i] = range(int(new_bounds[i][0]), int(new_bounds[i][1]))
+        self.branch = new_bounds[4]
 
     #Returns radius of snowflake on frame [t] with 5% padding
     def get_flake_radius(self, t):
@@ -132,7 +141,7 @@ class Snowflake:
         raster = np.pad(raster, ((0,0), (padding, padding)))
         return raster
 
-    #Returns raster of given frame with given cell radius
+    #Builds and returns raster of given frame with given cell (circle) radius
     def rasterize(self, t, radius):
         #If requesting previously drawn raster, return it
         if self.raster['frame'] == t and self.raster['radius'] == radius:
@@ -141,7 +150,7 @@ class Snowflake:
         #Otherwise save info to potentially avoid redrawing needlessly
         self.raster['frame'] = t
         self.raster['radius'] = radius
-        
+
         #Rasterize small using rectangles, or large using disks
         self.raster['data'] = self.rasterize_small(t) if radius == 1 else self.rasterize_large(t, radius)
         return self.raster['data']
@@ -172,7 +181,7 @@ class Snowflake:
         self.eighth = eighth
         self.cell = self.get_disk(max(eighth * 4, 2), bool)
 
-        #Quit now if cell is only 4x4
+        #Quit now if cell is only 4x4; no bars or fillets needed
         if not eighth:
             return
 
@@ -247,21 +256,21 @@ class Snowflake:
                     #Draw bar to ON cell in the 12 o'clock direction
                     if A[i - 1, j]:
                         raster[ci - cell_radius : ci + cell_radius, cj : cj + cell_diam] = True
-                    
+
                     #Draw bar to ON cell in the 10 o'clock direction
                     upper_left = A[i_par - 1, j - 1]
                     if upper_left and eighth:
                         raster[ci - eighth*3 : ci + eighth*7, cj - eighth*6 : cj + eighth*6] += self.bar[0]
                     elif upper_left:
                         raster[ci - 1 : ci + 3, cj - 1 : cj + 1] = True
-                    
+
                     #Draw bar to ON cell in the 8 o'clock direction
                     lower_left = A[i_par, j - 1]
                     if lower_left and eighth:
                         raster[ci + eighth : ci + eighth*11, cj - eighth*6 : cj + eighth*6] += self.bar[1]
                     elif lower_left:
                         raster[ci + 1 : ci + 5, cj - 1: cj + 1] = True
-                    
+
                     #Remaining logic is only for OFF cells
                     continue
 
@@ -328,9 +337,9 @@ class Snowflake:
 
         #Loop through new grid and turn on cells based on the neighbor counts in previous grids
         for i in range(2, size - 2):
-            row_ncount = 0
+            neighbors_in_row = False
             for j in range(2, size - 2):
-                #Cell is already on, skip
+                #Cell is already on, skip [This is where 'melting' conditions could be added]
                 if A[i,j]:
                     continue
 
@@ -338,11 +347,10 @@ class Snowflake:
                 [neigh[0], neigh[2]] = self.count_neighbors(A, i, j)
                 in_bounds = i < prev_size - 2 and j < prev_size - 2
                 [neigh[1], neigh[3]] = self.count_neighbors(B, i, j) if in_bounds else [0, 0]
-                row_ncount += sum(neigh)
 
                 #Check if branching rule is satisfied
                 branching = self.branch and neigh[0] == 1 and (neigh[1] == 1 or neigh[2] == 0)
-                
+
                 ##Alternate branching rule that creates cleaner spike intersections
                 #branching = self.branch and neigh[0] == 1 and (neigh[1] == 1 or neigh[3] == 0)
 
@@ -351,8 +359,11 @@ class Snowflake:
                     self.grids[t][i,j] = True
                     outermost = max(outermost, max(i, j))
 
+                #Set neighbors_in_row flag if any neighbors were found
+                neighbors_in_row = neighbors_in_row or any(neigh)
+
             #Finish early if no neighbors left
-            if not row_ncount:
+            if not neighbors_in_row:
                 break
 
         #Truncate grid to ending row & column, with 4 padding layers for next gen's neighbor counting
@@ -365,21 +376,20 @@ class Snowflake:
         self.grids[t][:,:2] = np.flip(self.grids[t][:,3:5], 1)
 
     #Runs a defined sequence of presets
-    def gen_sequence(self):#, sequence)
-        sequence = [[[1,2], [0,7], [0,1], [0,7], True, 13],
-                    [[1,3], [0,7], [0,2], [0,7], False, 1],
-                    [[1,5], [0,7], [0,7], [0,7], False, 1],
-                    [[0,7], [0,7], [1,3], [1,2], False, 4]]
+    def gen_sequence(self, sequence):#, sequence)
+        #sequence = [[[1,2], [0,7], [0,1], [0,7], True, 13],
+        #            [[1,3], [0,7], [0,2], [0,7], False, 1],
+        #            [[1,5], [0,7], [0,7], [0,7], False, 1],
+        #            [[0,7], [0,7], [1,3], [1,2], False, 4]]
 
         #Get total number of steps for progress indicator
         total = sum([step[5] for step in sequence])
-        
+
         self.__init__()
         for step in sequence:
             #Set rules
-            self.set_bounds(step[:4])
-            self.spike_rule = step[4]
-            
+            self.set_bounds(step[:5])
+
             #Repeat rule the given number of times
             for i in range(step[5]):
                 frame = len(self.grids)
@@ -399,8 +409,10 @@ class Application:
     resolutions = [2**k for k in [0, 1, 3, 4, 5]]
 
     #Default properties
-    presets = {'Classic': [[1,2],[0,7],[0,7],[0,7], False]}
-    res_num = 1
+    presets = {'Classic': [[1,2],[0,7],[0,7],[0,7], False, 8]}
+    branch = presets['Classic'][4]
+    weights = [1]
+    res_num = 2
     interp = False
     flip = False
     min_radius = 2
@@ -412,7 +424,7 @@ class Application:
     generating = None
     zooming = None
     advancing = None
-    
+
     #Builds the GUI window(s) with a blank snowflake
     def __init__(self):
         #Read in presets from file and create snowflake object
@@ -422,12 +434,12 @@ class Application:
         #Create root window
         self.root = tk.Tk()
         self.root.wm_title('Snowflake Generator')
-        self.root.protocol("WM_DELETE_WINDOW", exit)
+        self.root.protocol('WM_DELETE_WINDOW', exit)
 
         #Estimate screen resolution using width of given font size, since winfo_fpixels sometimes gets it wrong
         font_size = 20
         font = tkfont.Font(family='Helvetica', size=font_size)
-        self.font_ratio = max(font.measure("m") / font_size / 1.1, 1)
+        self.font_ratio = max(font.measure('m') / font_size / 1.1, 1)
 
         #Create GUI input frames and pack into root
         self.create_setup()
@@ -444,7 +456,7 @@ class Application:
             self.root.update()                             #Update current root in order to read height in pixels for sizing snowflake frame
             self.build_GUI()                               #Builds the GUI by adding snowflake canvas (TkAgg) and re-packing input frames
             self.root.eval('tk::PlaceWindow . center')     #Re-center root window
-            self.root.bind("<Key>", self.key_press)        #For binding 'R' key to the resize button
+            self.root.bind('<Key>', self.key_press)        #For binding 'R' key to the resize button
 
         #Start with 'Classic' preset and play buttons disabled
         self.select_preset('Classic')
@@ -491,10 +503,10 @@ class Application:
         self.neighbor_labels = ['Current Adjacent',  'Previous Adjacent', 'Current Proximate', 'Previous Proximate']
         if arg_entries:
             self.create_entries()
-            self.frm_entries.grid(row=1, column=0, columnspan=3)
+            self.frm_entries.grid(row=1, column=0, columnspan=4)
         else:
             self.create_sliders()
-            self.cnv_neighbors.get_tk_widget().grid(row=1, column=0, columnspan=3)
+            self.cnv_neighbors.get_tk_widget().grid(row=1, column=0, columnspan=4)
 
         #Preset menu and branch check button
         self.frm_preset = tk.Frame(self.frm_setup)
@@ -505,23 +517,25 @@ class Application:
         self.btn_branch = tk.Checkbutton(self.frm_preset, text='Encourage branching', variable='branch', command=self.toggle_branch)
 
         #Generate/clear buttons
-        self.btn_clear = tk.Button(master=self.frm_setup, text="Clear", font='bold', bd=4, height=2, width=9, command=self.clear)
-        self.btn_gen_next = tk.Button(master=self.frm_setup, text="Generate next   ▶︎", font='bold', bd=4, height=2, width=16)
+        self.btn_clear = tk.Button(master=self.frm_setup, text='Clear', font='bold', bd=4, height=2, width=8, command=self.clear)
+        self.btn_gen_next = tk.Button(master=self.frm_setup, text='Generate next  >', font='bold', bd=4, height=2, width=14)
         self.btn_gen_next.bind('<ButtonPress-1>', lambda event: self.gen_next())
         self.btn_gen_next.bind('<ButtonRelease-1>', lambda event: self.stop_gen())
-        self.btn_gen_all = tk.Button(master=self.frm_setup, text="Generate all   ▶︎▶︎", font='bold', bd=4, height=2, width=18, command=self.gen_all)
+        self.btn_gen_all = tk.Button(master=self.frm_setup, text='Generate all  >>', font='bold', bd=4, height=2, width=14, command=self.gen_all)
+        self.btn_gen_random = tk.Button(master=self.frm_setup, text='Random', font='bold', bd=4, height=2, width=8, command=self.gen_random)
 
         #Grid placements
-        self.lbl_neighbor_title.grid(row=0, column=0, columnspan=3)
+        self.lbl_neighbor_title.grid(row=0, column=0, columnspan=4)
 
-        self.frm_preset.grid(row=2, column=0, columnspan=3, pady=20)
+        self.frm_preset.grid(row=2, column=0, columnspan=4, pady=20)
         self.lbl_preset.pack(side=tk.LEFT, padx=10)
         self.men_preset.pack(side=tk.LEFT, padx=10)
         self.btn_branch.pack(side=tk.RIGHT, padx=10)
 
-        self.btn_clear.grid(row=3, column=0, pady=10, padx=10)
-        self.btn_gen_next.grid(row=3, column=1)
-        self.btn_gen_all.grid(row=3, column=2, padx=10)
+        self.btn_clear.grid(row=3, column=0, pady=10, padx=(10,5))
+        self.btn_gen_next.grid(row=3, column=1, padx=5)
+        self.btn_gen_all.grid(row=3, column=2, padx=5)
+        self.btn_gen_random.grid(row=3, column=3, padx=(5,10))
 
     #Creates four range sliders (Matplotlib.widgets.RangeSlider) for setting neighbor bounds
     def create_sliders(self):
@@ -585,7 +599,7 @@ class Application:
         #Four rows of entries
         for i in range(4):
             #Text labels for each row
-            self.lbl_neighbor_type[i] = tk.Label(self.frm_entries, bg=self.l_blue, text=self.neighbor_labels[i] + ":")
+            self.lbl_neighbor_type[i] = tk.Label(self.frm_entries, bg=self.l_blue, text=self.neighbor_labels[i] + ':')
             self.lbl_from[i] = tk.Label(self.frm_entries, bg=self.l_blue, text='from')
             self.lbl_to[i] = tk.Label(self.frm_entries, bg=self.l_blue, text='to')
 
@@ -668,16 +682,16 @@ class Application:
     def create_play(self):
         self.frm_play = tk.Frame(self.root)
 
-        self.btn_prev = tk.Button(self.frm_play, text="◀︎", width=8, height=2, bd=3)
+        self.btn_prev = tk.Button(self.frm_play, text='<', width=8, height=2, bd=3)
         self.btn_prev.bind('<ButtonPress-1>', lambda event: self.advance(-1))
         self.btn_prev.bind('<ButtonRelease-1>', lambda event: self.pause())
 
-        self.btn_next = tk.Button(self.frm_play, text="▶︎", width=8, height=2, bd=3)
+        self.btn_next = tk.Button(self.frm_play, text='>', width=8, height=2, bd=3)
         self.btn_next.bind('<ButtonPress-1>', lambda event: self.advance(1))
         self.btn_next.bind('<ButtonRelease-1>', lambda event: self.pause())
 
-        self.btn_first = tk.Button(self.frm_play, text="◀︎◀︎", width=6, height=2, bd=3, command=self.first)
-        self.btn_last = tk.Button(self.frm_play, text="▶︎▶︎", width=6, height=2, bd=3, command=self.last)
+        self.btn_first = tk.Button(self.frm_play, text='<<', width=6, height=2, bd=3, command=self.first)
+        self.btn_last = tk.Button(self.frm_play, text='>>', width=6, height=2, bd=3, command=self.last)
 
         #Grid placements
         self.btn_first.grid(row=1, column=0, padx=10)
@@ -710,8 +724,10 @@ class Application:
 
                 bounds += [bound]
 
-            bounds += [bool(int(data_str[-1]))]
+            bounds += [bool(int(data_str[-3]))]
+            bounds += [int(data_str[-2])]
             self.presets.update({name.strip(): bounds})
+            self.weights += [int(data_str[-1])]
 
     #Loads preset values into the sliders and updates branch flag
     def select_preset(self, selection):
@@ -729,15 +745,15 @@ class Application:
 
             self.cnv_neighbors.draw()
 
-        self.sf.branch = bounds[-1]
-        if self.sf.branch:
+        self.branch = bounds[4]
+        if self.branch:
             self.btn_branch.select()
         else:
             self.btn_branch.deselect()
 
     #Flips branch flag
     def toggle_branch(self):
-        self.sf.branch = not self.sf.branch
+        self.branch = not self.branch
 
     #Reinitializes snowflake and disables play buttons
     def clear(self):
@@ -762,25 +778,27 @@ class Application:
     #Reads bounds from sliders or entries, updating them if needed
     def read_bounds(self):
         if not arg_entries:
-            return [[int(i) for i in sld.val] for sld in self.sliders]
+            bounds = [[int(i) for i in sld.val] for sld in self.sliders]
+            return bounds + [self.branch]
 
-        bounds = [0] * 4
+        bounds = []
         for i in range(4):
             pair = [int(float(j.get())) for j in self.var_neighbors[i]]
             pair[0] = min(max(pair[0], 0), 6)
             pair[1] = min(max(pair[1], pair[0]), 6) + 1
-            bounds[i] = pair
+            bounds += [pair]
 
             self.var_neighbors[i][0].set(pair[0])
             self.var_neighbors[i][1].set(pair[1] - 1)
 
+        bounds += [self.branch]
         return bounds
 
     #Loads neighbor bounds into snowflake and generate next frame. Allows for click repeat
     def gen_next(self):
         bounds = self.read_bounds()
-
         self.sf.set_bounds(bounds)
+
         self.frame += 1
         self.sf.generate(self.frame)
         self.zoom_radius = max(self.sf.get_flake_radius(self.frame), self.zoom_radius)
@@ -811,6 +829,23 @@ class Application:
         self.play_state('normal')
         self.update()
 
+    #Generates a random sequence by alternating through presets based on weights and max durations
+    def gen_random(self):
+        sequence = []
+        preset_list = list(self.presets.values())
+
+        for i in range(5):
+            bounds = random.choices(preset_list, weights=self.weights)[0]
+            sequence += [bounds[:-1] + [random.randint(1, bounds[-1] + 1)]]
+
+        self.sf.gen_sequence(sequence)
+
+        self.frame = len(self.sf.grids) - 1
+        self.set_view(0)
+        self.set_view(self.sf.get_flake_radius(-1))
+        self.play_state('normal')
+        self.update()
+
     #Resets view to default radius and resolution, clears 'interpolate' and 'flip'
     def reset_view(self):
         self.interp = False
@@ -838,16 +873,11 @@ class Application:
     def set_resolution(self, new_res):
         self.res_num = new_res % len(self.resolutions)
 
-        if self.res_num == 0:
-            self.btn_resolution_minus['state'] = 'disabled'
-        else:
-            self.btn_resolution_minus['state'] = 'normal'
-
-        if self.res_num == len(self.resolutions) - 1:
-            self.btn_resolution_plus['state'] = 'disabled'
-        else:
-            self.btn_resolution_plus['state'] = 'normal'
-
+        #Enable or disable the +/- resolution buttons
+        new_state = 'disabled' if self.res_num == 0 else 'normal'
+        self.btn_resolution_minus['state'] = new_state
+        new_state = 'disabled' if self.res_num == len(self.resolutions) - 1 else 'normal'
+        self.btn_resolution_plus['state'] = new_state
         self.update()
 
     #Stops self.zoom() repitition
@@ -859,10 +889,9 @@ class Application:
     def zoom(self, direction):
         self.zoom_radius = max(self.min_radius, self.zoom_radius + direction)
 
-        if self.zoom_radius == self.min_radius:
-            self.btn_zoom_plus['state'] = 'disabled'
-        else:
-            self.btn_zoom_plus['state'] = 'normal'
+        #Enable or disable the + zoom button
+        new_state = 'disabled' if self.zoom_radius == self.min_radius else 'normal'
+        self.btn_zoom_plus['state'] = new_state
         self.update()
 
         #Initial click repeat delay of 200ms
@@ -887,10 +916,8 @@ class Application:
     def toggle_interp(self):
         self.interp = not self.interp
 
-        if self.interp:
-            self.img._interpolation = 'bicubic'
-        else:
-            self.img._interpolation = 'nearest'
+        #Update matplotlib's interpolation parameter
+        self.img._interpolation = 'bicubic' if self.interp else 'nearest'
         self.update()
 
     #Stops self.advance() repitition
@@ -924,10 +951,10 @@ class Application:
     #Updates imshow plot and reopen figure window if needed
     def update(self):
         self.img.set_data(self.get_image())
-
         if not arg_split:
             return self.canvas.draw()
 
+        #Recreate plot window if it was closed
         if not plt.fignum_exists(self.fignum):
             new_fig = plt.figure(figsize=(5 * self.font_ratio, 5 * self.font_ratio))
             new_manager = new_fig.canvas.manager
@@ -937,7 +964,7 @@ class Application:
         self.fig.canvas.draw()
         self.fig.show()
 
-    #Gets raster from sf object and modify size to fit in square canvas
+    #Gets raster from sf object and modify size to factor in zoom and fit in square canvas
     def get_image(self):
         #Get raster array from sf
         cell_radius = self.resolutions[self.res_num]
@@ -964,7 +991,7 @@ class Application:
         #Add positive padding rows/columns and update zoom_radius
         raster = np.pad(raster, ((pad_y,pad_y), (pad_x,pad_x)))
         self.zoom_radius = int((len(raster)/cell_size - 1) / 2)
-        
+
         #Flip 90 degrees by simply transposing
         if self.flip:
             raster = np.transpose(raster)
